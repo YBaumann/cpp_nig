@@ -38,11 +38,11 @@ All benchmarks were run on a MacOS machine with 8 cores and 8 threads. The file 
 ### Overview
 
 - **PDF Function:**  
-  Achieves roughly a **4x speedup** compared to SciPy's implementation (varying with NIG parameters).
+  Achieves roughly a **10x speedup** compared to SciPy's implementation (varying with NIG parameters).
 
 - **CDF and PPF Functions:**  
-  Enjoy a dramatic **30x–50x speedup**, again depending on parameter settings.
+  Enjoy a dramatic **200x–210x speedup**, again depending on parameter settings.
 
 - **Cubic Spline PPF Evaluation:**  
-  After a one-time initialization, evaluating the PPF for 1 billion values takes approximately **1.2 seconds**. This is about **400,000x faster** than our C++ NIG PPF implementation and around **1.6 million times faster** than using SciPy's `norminvgauss`.
+  After a one-time initialization, evaluating the PPF for 1 billion values takes approximately **1 second**. This is about **40,000x faster** than our C++ NIG PPF implementation and around **4.5 million times faster** than using SciPy's `norminvgauss`. Of course they didn't optimise for this so it is not entirely fair to compare. Also, we test it only to 1e-7 accuracy. To increase accuracy, increase the spline points to maybe 10k? It should not really decrease computation speed.
 
