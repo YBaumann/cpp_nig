@@ -74,19 +74,19 @@ def main():
 
     print("PPF Benchmark:")
     print(f"  SciPy norminvgauss ppf average time:          {sp_ppf_time:.6f} sec")
-    print(f"  C++ NIG ppf (spline approximation) average time:{cpp_ppf_time:.6f} sec")
+    print(f"  C++ NIG ppf average time:                     {cpp_ppf_time:.6f} sec")
     print(f"  Speedup (SciPy / C++):                        {speedup_ppf:.2f}x\n")
 
     # ----------------------------
     # Benchmark nig_values_from_normal_values Mapping
     # ----------------------------
     x_normal = np.linspace(-5, 5, 1_000)
-
+    x_huge = np.linspace(-5, 5, 10_000_000)
     # Warm up the nig_values_from_normal_values (to initialize the spline, etc.).
     dist.nig_values_from_normal_values(np.array([0]))
 
     nig_values_from_normal_values_time, _ = average_time(
-        dist.nig_values_from_normal_values, x_normal, repeats=repeats
+        dist.nig_values_from_normal_values, x_huge, repeats=repeats
     )
     ppf_from_norm_time, _ = average_time(
         lambda x: dist.ppf(norm.cdf(x)), x_normal, repeats=repeats
@@ -99,10 +99,10 @@ def main():
 
     print("nig_values_from_normal_values Map Benchmark:")
     print(
-        f"  C++ NIG nig_values_from_normal_values average time:           {nig_values_from_normal_values_time:.6f} sec"
+        f"  C++ NIG nig_values_from_normal_values average time:                 {nig_values_from_normal_values_time:.6f} sec"
     )
     print(
-        f"  C++ NIG ppf(norm.cdf(x)) average time:       {ppf_from_norm_time:.6f} sec"
+        f"  C++ NIG ppf(norm.cdf(x)) average time:                              {ppf_from_norm_time:.6f} sec"
     )
     print(
         f"  Speedup (ppf(norm.cdf(x)) / nig_values_from_normal_values_map):     {speedup_nig_values_from_normal_values:.2f}x\n"

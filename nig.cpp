@@ -14,6 +14,8 @@
 #include <vector>
 #include <stdexcept>
 #include <memory>
+#include <omp.h>
+
 
 namespace py = pybind11;
 
@@ -25,6 +27,7 @@ inline double norm_cdf(double x) {
 class CubicSpline {
 public:
     CubicSpline(py::array_t<double> x_array, py::array_t<double> y_array) {
+
         auto buf_x = x_array.request();
         auto buf_y = y_array.request();
         if (buf_x.ndim != 1 || buf_y.ndim != 1)
@@ -40,6 +43,7 @@ public:
         a.resize(n);
         auto ptr_x = static_cast<double*>(buf_x.ptr);
         auto ptr_y = static_cast<double*>(buf_y.ptr);
+
         for (size_t i = 0; i < n; i++) {
             x[i] = ptr_x[i];
             a[i] = ptr_y[i];
@@ -91,16 +95,16 @@ public:
         }
     }
 
-    // Evaluate the spline at a single point.
     double operator()(double x_val) const {
-        if (x_val <= x.front())
+        double x_front = x.front();
+        if (x_val <= x_front)
             return a.front();
         if (x_val >= x.back())
             return a.back();
 
         // Since x is evenly spaced, compute the index directly.
         size_t n = x.size();
-        size_t low = static_cast<size_t>((x_val - x.front()) / spacing);
+        size_t low = static_cast<size_t>((x_val - x_front) / spacing);
         if (low >= n - 1)
             low = n - 2;
         double dx = x_val - x[low];
@@ -125,7 +129,11 @@ public:
     size_t spline_points;
 
     NIG(double a_ = 1.5, double b_ = 0.5, double loc_ = 0.0, double scale_ = 1.0, size_t spline_points_ = 100)
-        : a(a_), b(b_), loc(loc_), scale(scale_), spline_points(spline_points_), spline_initialized(false) {}
+        : a(a_), b(b_), loc(loc_), scale(scale_), spline_points(spline_points_), spline_initialized(false) {
+            int numProcs = omp_get_num_procs();
+            int maxThreads = omp_get_max_threads();
+            std::cout << "NIG is using: " << numProcs << " Processors and " << maxThreads << " Threads." << std::endl; 
+        }
 
     // Compute the PDF for a 1-D NumPy array of x values.
     py::array_t<double> pdf(py::array_t<double> input_array) const {
@@ -136,6 +144,8 @@ public:
         auto result = py::array_t<double>(n);
         auto r_in = input_array.unchecked<1>();
         auto r_out = result.mutable_unchecked<1>();
+
+        #pragma omp parallel for schedule(static)
         for (size_t i = 0; i < n; i++){
             double x_val = r_in(i);
             r_out(i) = _pdf_single(x_val);
@@ -151,6 +161,8 @@ public:
         auto result = py::array_t<double>(n);
         auto r_in = input_array.unchecked<1>();
         auto r_out = result.mutable_unchecked<1>();
+
+        #pragma omp parallel for schedule(static)
         for (size_t i = 0; i < n; i++){
             double x_val = r_in(i);
             r_out(i) = _cdf_single(x_val);
@@ -167,6 +179,7 @@ public:
         auto r_in = input_array.unchecked<1>();
         auto r_out = result.mutable_unchecked<1>();
 
+        #pragma omp parallel for schedule(static)
         for (size_t i = 0; i < n; i++){
             double q = r_in(i);
             r_out(i) = _ppf_single(q);
@@ -187,6 +200,8 @@ public:
         if (!spline_initialized) {
             build_ppf_spline();
         }
+
+        #pragma omp parallel for schedule(static)
         for (size_t i = 0; i < n; i++){
             double x_val = r_in(i);
             r_out(i) = (*ppf_spline)(x_val);
@@ -256,6 +271,8 @@ private:
         std::vector<double> q_vals(spline_points);
         std::vector<double> ppf_vals(spline_points);
         double step = (end - start) / static_cast<double>(spline_points - 1);
+        
+        #pragma omp parallel for schedule(static)
         for (size_t i = 0; i < spline_points; i++){
             double x_val = start + i * step;
             double u = norm_cdf(x_val);
