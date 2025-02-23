@@ -35,7 +35,7 @@ public:
             throw std::runtime_error("x and y arrays must be one-dimensional");
         if (buf_x.shape[0] != buf_y.shape[0])
             throw std::runtime_error("x and y arrays must have the same length");
-        size_t n = buf_x.shape[0];
+        n = buf_x.shape[0];
         if (n < 2)
             throw std::runtime_error("At least two data points are required for spline interpolation");
 
@@ -50,8 +50,14 @@ public:
             a[i] = ptr_y[i];
         }
 
+        x_front = x[0];
+        x_back = x[n-1];
+        a_front = a[0];
+        a_back = a[n-1];
+
         // Because we assume evenly spaced x, compute and store spacing.
         spacing = x[1] - x[0];
+        _inv_spacing = 1.0 / spacing;
         for (size_t i = 1; i < n - 1; i++) {
             double current_spacing = x[i+1] - x[i];
             if (std::abs(current_spacing - spacing) > 1e-2)
@@ -97,15 +103,13 @@ public:
     }
 
     double operator()(double x_val) const {
-        double x_front = x.front();
         if (x_val <= x_front)
-            return a.front();
-        if (x_val >= x.back())
-            return a.back();
+            return a_front;
+        if (x_val >= x_back)
+            return a_back;
 
         // Since x is evenly spaced, compute the index directly.
-        size_t n = x.size();
-        size_t low = static_cast<size_t>((x_val - x_front) / spacing);
+        size_t low = static_cast<size_t>((x_val - x_front) * _inv_spacing);
         if (low >= n - 1)
             low = n - 2;
         double dx = x_val - x[low];
@@ -118,7 +122,13 @@ private:
     std::vector<double> b;
     std::vector<double> c;
     std::vector<double> d;
+    double x_front;
+    double x_back;
+    double a_front;
+    double a_back;
     double spacing;
+    double _inv_spacing;
+    size_t n;
 };
 
 
@@ -129,7 +139,7 @@ public:
     double a, b, loc, scale;
     size_t spline_points;
 
-    NIG(double a_ = 1.5, double b_ = 0.5, double loc_ = 0.0, double scale_ = 1.0, size_t spline_points_ = 100)
+    NIG(double a_ = 1.5, double b_ = 0.5, double loc_ = 0.0, double scale_ = 1.0, size_t spline_points_ = 200)
         : a(a_), b(b_), loc(loc_), scale(scale_), spline_points(spline_points_), spline_initialized(false) {
             _exp_sqrt_a2_b2 = std::exp(std::sqrt(a*a-b*b));
             _inv_scale = 1./scale;
@@ -310,7 +320,7 @@ PYBIND11_MODULE(nig, m) {
              py::arg("b") = 0.5,
              py::arg("loc") = 0.0,
              py::arg("scale") = 1.0,
-             py::arg("spline_points") = 100)
+             py::arg("spline_points") = 200)
         .def("pdf", &NIG::pdf,
              "Compute the NIG pdf for each element in the provided 1-D NumPy array")
         .def("cdf", &NIG::cdf,

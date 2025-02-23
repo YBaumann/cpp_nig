@@ -25,7 +25,7 @@ def main():
     b = 1.5
     loc = 0.0
     scale = 1.2
-    spline_points = 200
+    spline_points = 500
 
     # Create our NIG distribution instance.
     dist = nig.NIG(a, b, loc, scale, spline_points)
@@ -82,8 +82,8 @@ def main():
     # ----------------------------
     spline_eval_points = 10_000_000
     manual_eval_points = 1_000
-    x_normal = np.linspace(-5, 5, manual_eval_points)
-    x_huge = np.linspace(-5, 5, spline_eval_points)
+    x_normal = np.random.uniform(-5, 5, manual_eval_points)
+    x_huge = np.random.uniform(-5, 5, spline_eval_points)
     # Warm up the nig_values_from_normal_values (to initialize the spline, etc.).
     dist.nig_values_from_normal_values(np.array([0]))
 

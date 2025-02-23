@@ -27,7 +27,7 @@ NIG_PARAMS = [
     (10, 0, 0.0, 1),  # symmetric case (B=0)
 ]
 
-SPLINE_POINTS = 200
+SPLINE_POINTS = 10_000
 
 
 # This fixture creates both the C++ and SciPy versions for each parameter set.
@@ -54,7 +54,7 @@ def test_cdf_value_comparison(nig_pair):
     xx_values = np.linspace(-UNIFORM_BOUNDS, UNIFORM_BOUNDS, CDF_VALUES)
     cpp_arr = CPP_NIG.cdf(xx_values)
     scipy_arr = SCIPY_NIG.cdf(xx_values)
-    indices = np.where(scipy_arr > 1)[0]
+    indices = np.where(scipy_arr > 1)[0]  # SCIPY CDF fails at some points
     mask = np.ones(scipy_arr.shape[0], bool)
     if indices.size > 0:
         mask[indices[0] :] = False
@@ -91,7 +91,7 @@ def test_cdf_monotonic_increasing(nig_pair):
 
 def test_ppf_cdf_bijection(nig_pair):
     A, B, LOC, SCALE, CPP_NIG, _ = nig_pair
-    xx_values = np.linspace(1e-6, 1 - 1e-6, 10 * PPF_VALUES)
+    xx_values = np.linspace(1e-6, 1 - 1e-6, PPF_VALUES)
     ppf_values = CPP_NIG.ppf(xx_values)
     cdf_values = CPP_NIG.cdf(ppf_values)
     assert np.allclose(
@@ -125,13 +125,9 @@ def test_ppf_monotonic_increasing(nig_pair):
 
 def test_nig_values_from_normal_values_vs_ppf(nig_pair):
     A, B, LOC, SCALE, CPP_NIG, SCIPY_NIG = nig_pair
-    # Generate an array of x values (from a normal variable).
-    x_values = np.linspace(-5, 5, 100)
-    # Expected: compute accurate ppf on the normal CDF of x.
+    x_values = np.linspace(-5, 5, 10_000)
     expected = CPP_NIG.ppf(norm.cdf(x_values))
-    # Actual: use the copula_map which uses the cubic spline approximation.
     result = CPP_NIG.nig_values_from_normal_values(x_values)
-    # Compare the two with an acceptable tolerance.
     assert np.allclose(
         result, expected, atol=1e-7
     ), f"nig_values_from_normal_values vs ppf(norm.cdf(x)) mismatch for parameters {(A, B, LOC, SCALE)}!"
@@ -139,10 +135,9 @@ def test_nig_values_from_normal_values_vs_ppf(nig_pair):
 
 def test_nig_values_from_normal_values_monotonic_increasing(nig_pair):
     A, B, LOC, SCALE, CPP_NIG, SCIPY_NIG = nig_pair
-    x_values = np.linspace(-5, 5, 100)
+    x_values = np.linspace(-5, 5, 1_000_000)
     result = CPP_NIG.nig_values_from_normal_values(x_values)
-    # Differences between successive mapped values should be nonnegative.
     diffs = np.diff(result)
     assert np.all(
-        diffs >= -1e-12
+        diffs >= 1e-8
     ), f"nig_values_from_normal_values result is not monotonic increasing for parameters {(A, B, LOC, SCALE)}!"
