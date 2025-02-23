@@ -33,7 +33,7 @@ Make sure to change the path to boost and OpenMP in your `setup.py`!!
 
 ## Timing
 
-All benchmarks were run on a MacOS machine with 8 cores and 8 threads.
+All benchmarks were run on a MacOS machine with 8 cores and 8 threads. The file `run_timings.py` will reproduce the results.
 
 ### Overview
 
@@ -46,16 +46,3 @@ All benchmarks were run on a MacOS machine with 8 cores and 8 threads.
 - **Cubic Spline PPF Evaluation:**  
   After a one-time initialization, evaluating the PPF for 1 billion values takes approximately **1.2 seconds**. This is about **400,000x faster** than our C++ NIG PPF implementation and around **1.6 million times faster** than using SciPy's `norminvgauss`.
 
-### Detailed Benchmark Summary
-
-**Environment:**  
-- **Processors/Threads:** 8
-
-| Function                            | Benchmark (values)                                          | SciPy Average Time | C++ NIG Average Time | Speedup          |
-|-------------------------------------|-------------------------------------------------------------|--------------------|----------------------|------------------|
-| **PDF**                           | 10,000                                                     | 0.000656 sec       | 0.000173 sec         | **3.79x**        |
-| **CDF**                           | 1,000                                                      | 0.542046 sec       | 0.024670 sec         | **21.97x**       |
-| **PPF**                           | 100                                                        | 0.959331 sec       | 0.033139 sec         | **28.95x**       |
-| **nig_values_from_normal_values** | Cubic spline on 10M values, standard on 1K values            | —                  | —                    | **39.57x** (comparing ppf(norm.cdf(x)) to nig_values_from_normal_values_map) |
-
-*Note: The speedup factors are derived by comparing the average execution times between SciPy and the C++ NIG implementations.*
