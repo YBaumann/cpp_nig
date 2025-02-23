@@ -8,9 +8,9 @@ from scipy.stats import norm, norminvgauss
 
 import nig
 
-PDF_VALUES = 10_000_0
-CDF_VALUES = 10_0
-PPF_VALUES = 1_00
+PDF_VALUES = 10_000_000
+CDF_VALUES = 1_000
+PPF_VALUES = 100
 UNIFORM_BOUNDS = 20
 
 # Define several sets of parameters to test.
@@ -91,7 +91,7 @@ def test_cdf_monotonic_increasing(nig_pair):
 
 def test_ppf_cdf_bijection(nig_pair):
     A, B, LOC, SCALE, CPP_NIG, _ = nig_pair
-    xx_values = np.linspace(1e-6, 1 - 1e-6, PPF_VALUES)
+    xx_values = np.linspace(1e-6, 1 - 1e-6, 10 * PPF_VALUES)
     ppf_values = CPP_NIG.ppf(xx_values)
     cdf_values = CPP_NIG.cdf(ppf_values)
     assert np.allclose(

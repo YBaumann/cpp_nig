@@ -1,5 +1,6 @@
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
+#define inv_sqrt2 1. / std::sqrt(2.0)
 #endif
 
 #include <pybind11/pybind11.h>
@@ -21,7 +22,7 @@ namespace py = pybind11;
 
 // Helper: Standard Normal CDF using the complementary error function.
 inline double norm_cdf(double x) {
-    return 0.5 * std::erfc(-x / std::sqrt(2.0));
+    return 0.5 * std::erfc(-x * inv_sqrt2);
 }
 
 class CubicSpline {
@@ -108,7 +109,7 @@ public:
         if (low >= n - 1)
             low = n - 2;
         double dx = x_val - x[low];
-        return a[low] + b[low] * dx + c[low] * dx * dx + d[low] * dx * dx * dx;
+        return a[low] + (b[low] + (c[low] + d[low] * dx) * dx) * dx;
     }
 
 private:
@@ -130,6 +131,8 @@ public:
 
     NIG(double a_ = 1.5, double b_ = 0.5, double loc_ = 0.0, double scale_ = 1.0, size_t spline_points_ = 100)
         : a(a_), b(b_), loc(loc_), scale(scale_), spline_points(spline_points_), spline_initialized(false) {
+            _exp_sqrt_a2_b2 = std::exp(std::sqrt(a*a-b*b));
+            _inv_scale = 1./scale;
             int numProcs = omp_get_num_procs();
             int maxThreads = omp_get_max_threads();
             std::cout << "NIG is using: " << numProcs << " Processors and " << maxThreads << " Threads." << std::endl; 
@@ -210,23 +213,30 @@ public:
     }
 
 private:
+    // Precomputed values for pdf
+    double _exp_sqrt_a2_b2;
+    double _inv_scale;
+
+    // Predefined integrator
+    using TanhSinh = boost::math::quadrature::tanh_sinh<double>;
+    mutable TanhSinh integrator;
+
+
     double _pdf_single(double x) const {
-        double y = (x - loc) / scale;
+        double y = (x - loc) * _inv_scale;
         double sqrt_one_plus_y2 = std::sqrt(1 + y*y);
-        double right_factor = std::exp(std::sqrt(a*a - b*b) + b*y);
+        double right_factor = _exp_sqrt_a2_b2 * std::exp(b*y);
         double left_factor = a * boost::math::cyl_bessel_k(1, a * sqrt_one_plus_y2) / (M_PI * sqrt_one_plus_y2);
         double res = left_factor * right_factor;
-        return res / scale;
+        return res * _inv_scale;
     }
 
     double _cdf_single(double x) const {
-        using boost::math::quadrature::tanh_sinh;
-        tanh_sinh<double> integrator;
         auto integrand = [this](double t) -> double {
             double val = _pdf_single(t);
             return std::isfinite(val) ? val : 0.;
         };
-        double tol = 1e-16;
+        double tol = 1e-12;
         double lower_limit = -60;
         double upper_limit = 60;
         double result = 0;

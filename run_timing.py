@@ -24,7 +24,7 @@ def main():
     a = 3
     b = 1.5
     loc = 0.0
-    scale = 1.0
+    scale = 1.2
     spline_points = 200
 
     # Create our NIG distribution instance.
@@ -33,12 +33,12 @@ def main():
     # Create a corresponding frozen SciPy norminvgauss distribution.
     sp_dist = st.norminvgauss(a, b, loc=loc, scale=scale)
 
-    repeats = 10
+    repeats = 20
 
     # ----------------------------
     # Benchmark PDF computation
     # ----------------------------
-    x_pdf = np.linspace(-5, 5, 10_000)
+    x_pdf = np.linspace(-5, 5, 5_000_000)
 
     sp_pdf_time, _ = average_time(sp_dist.pdf, x_pdf, repeats=repeats)
     cpp_pdf_time, _ = average_time(dist.pdf, x_pdf, repeats=repeats)
@@ -52,7 +52,7 @@ def main():
     # ----------------------------
     # Benchmark CDF computation
     # ----------------------------
-    x_cdf = np.linspace(-5, 5, 1_000)
+    x_cdf = np.linspace(-5, 5, 1_00)
 
     sp_cdf_time, _ = average_time(sp_dist.cdf, x_cdf, repeats=repeats)
     cpp_cdf_time, _ = average_time(dist.cdf, x_cdf, repeats=repeats)
@@ -66,7 +66,7 @@ def main():
     # ----------------------------
     # Benchmark PPF computation
     # ----------------------------
-    q = np.linspace(0.0001, 0.9999, 1_00)
+    q = np.linspace(0.0001, 0.9999, 10)
 
     sp_ppf_time, _ = average_time(sp_dist.ppf, q, repeats=repeats)
     cpp_ppf_time, _ = average_time(dist.ppf, q, repeats=repeats)
@@ -80,16 +80,20 @@ def main():
     # ----------------------------
     # Benchmark nig_values_from_normal_values Mapping
     # ----------------------------
-    x_normal = np.linspace(-5, 5, 1_000)
-    x_huge = np.linspace(-5, 5, 10_000_000)
+    spline_eval_points = 10_000_000
+    manual_eval_points = 1_000
+    x_normal = np.linspace(-5, 5, manual_eval_points)
+    x_huge = np.linspace(-5, 5, spline_eval_points)
     # Warm up the nig_values_from_normal_values (to initialize the spline, etc.).
     dist.nig_values_from_normal_values(np.array([0]))
 
+    fast_repeats = repeats * 5
+
     nig_values_from_normal_values_time, _ = average_time(
-        dist.nig_values_from_normal_values, x_huge, repeats=repeats
+        dist.nig_values_from_normal_values, x_huge, repeats=fast_repeats
     )
     ppf_from_norm_time, _ = average_time(
-        lambda x: dist.ppf(norm.cdf(x)), x_normal, repeats=repeats
+        lambda x: dist.ppf(norm.cdf(x)), x_normal, repeats=fast_repeats
     )
     speedup_nig_values_from_normal_values = (
         ppf_from_norm_time / nig_values_from_normal_values_time
@@ -105,7 +109,7 @@ def main():
         f"  C++ NIG ppf(norm.cdf(x)) average time:                              {ppf_from_norm_time:.6f} sec"
     )
     print(
-        f"  Speedup (ppf(norm.cdf(x)) / nig_values_from_normal_values_map):     {speedup_nig_values_from_normal_values:.2f}x\n"
+        f"  Speedup (ppf(norm.cdf(x)) / nig_values_from_normal_values_map):     {speedup_nig_values_from_normal_values * spline_eval_points / manual_eval_points:.2f}x\n"
     )
 
 
