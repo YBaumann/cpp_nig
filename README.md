@@ -1,6 +1,10 @@
 # NIG Distribution with Cubic Spline Approximation
 
-This repository implements the Normal Inverse Gaussian (NIG) distribution in C++ using pybind11 and Boost. It provides high-performance routines to compute the probability density function (pdf), cumulative distribution function (cdf), and inverse cdf (ppf) of the NIG distribution. Additionally, it includes a specialized function for mapping standard normal values to NIG quantiles using a cubic spline approximation for efficient copula mapping.
+This repository implements the Normal Inverse Gaussian (NIG) distribution in C++ using pybind11 and Boost. It includes a specialized function for mapping standard normal values to NIG quantiles using a cubic spline approximation for efficient copula mapping.
+
+A small script to evaluate the time spent for the different computations is provided. The function `nig_values_from_normal_values` processes 1 billion values in approximately 5 seconds.
+
+Make sure to change the path to boost in your `setup.py`!!
 
 ## Files
 
@@ -26,3 +30,5 @@ This repository implements the Normal Inverse Gaussian (NIG) distribution in C++
   A set of pytest-based tests verifying that:
   - The C++ implementation’s pdf, cdf, and ppf match those from SciPy’s `norminvgauss` within acceptable tolerances.
   - The copula mapping function (`nig_values_from_normal_values`) produces equivalent results to `ppf(norm.cdf(x))` and is monotonic.
+
+
